@@ -1,0 +1,103 @@
+[tool.poetry]
+name = "finance101"
+version = "1.0.0"
+description = "Explanation of Financial Topics"
+license = "MIT"
+authors = ["Jeroen Bouma"]
+readme = "README.md"
+repository = "https://github.com/JerBouma/finance101"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+keywords = [
+    "Finance",
+    "Toolkit",
+    "Financial",
+    "Analysis",
+    "Fundamental",
+    "Technical",
+    "Quantitative",
+    "Database",
+    "Equities",
+    "Currencies",
+    "Economics",
+    "ETFs",
+    "Funds",
+    "Indices",
+    "Moneymarkets",
+    "Commodities",
+    "Options"
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10, <3.13"
+pandas = {version = "^2.2", extras = ["computation", "performance", "plot"]}
+yfinance = { version = "*", optional = true }
+streamlit = "^1.42.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+pylint = "^3.3.0"
+codespell = "^2.3.0"
+black = "^24.8.0"
+pytest-mock = "^3.14.0"
+pytest-recording = "^0.13.2"
+pytest-cov = "^5.0.0"
+ruff = "^0.6.7"
+pytest-timeout = "^2.3.1"
+pytest-recorder = "^0.3.0"
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["setuptools<65.5.0", "poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 122
+lint.select = ["E", "W", "F", "Q", "W", "S", "UP", "I", "PD", "SIM", "PLC", "PLE", "PLR", "PLW"]
+lint.ignore = ["S105", "S106", "S107", "PLR0913", "PLR0912", "PLR0911", "PLR0915", "PD010", "PD013", "S310", "S301"]
+exclude = ["conftest.py"]
+
+[tool.pylint]
+max-line-length = 122
+disable = [
+    "R0913",
+    "W1514",
+    "R0911",
+    "R0912",
+    "R0915",
+    "R0801",
+    "W0221",
+    "C0103",
+    "E1131",
+    "R0917", # too-many-positional-arguments
+    ]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+
+[tool.lint.isort]
+profile = "black"
+line_length = 122
+skip_gitignore = true
+combine_as_imports = true
+
+[tool.codespell]
+ignore-words-list = 'te,hsi,amplitud,nam,tha,plaform'
+skip = '*.json,./.git,pyproject.toml,poetry.lock,examples'
+
+[tool.mypy]
+disable_error_code = "misc, valid-type, attr-defined, index"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::pytest.PytestAssertRewriteWarning:",
+]
