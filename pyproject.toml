@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "finance101"
+name = "pages"
 version = "1.0.0"
 description = "Explanation of Financial Topics"
 license = "MIT"
@@ -16,7 +16,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-package-mode = false 
 keywords = [
     "Finance",
     "Toolkit",
@@ -40,7 +39,7 @@ keywords = [
 [tool.poetry.dependencies]
 python = ">=3.10, <3.13"
 pandas = {version = "^2.2", extras = ["computation", "performance", "plot"]}
-yfinance = { version = "*", optional = true }
+yfinance = "*"
 streamlit = "^1.42.1"
 
 [tool.poetry.group.dev.dependencies]
