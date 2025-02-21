@@ -1,288 +1,89 @@
-import datetime
-
-import numpy as np
-import pandas as pd
 import streamlit as st
 import yfinance as yf
+import datetime
 
-# Set default lump sum amount (used for both strategies)
-DEFAULT_LUMP_SUM = 10000.0
+import matplotlib.pyplot as plt
+import pandas_datareader as pdr
+import altair as alt
+import pandas as pd
 
-# Well-known ETFs, including diversified options beyond just the S&P 500
-etfs = {
-    "SPDR S&P 500 ETF Trust": "SPY",
-    "Vanguard Total Stock Market ETF": "VTI",
-    "Vanguard FTSE Developed Markets ETF": "VEA",
-    "Vanguard FTSE Emerging Markets ETF": "VWO",
-    "iShares Core US Aggregate Bond ETF": "AGG",
-}
 
-# Radio button to select which ETF to use for the simulation
-ticker_label = st.sidebar.radio("Select ETF for Simulation", list(etfs.keys()))
-selected_ticker = etfs[ticker_label]
 
-# If not already in session state, download and store historical data for all ETFs
-if "historical_data_all" not in st.session_state:
-    st.session_state["historical_data_all"] = {}
-    for name, ticker in etfs.items():
-        data = yf.download(ticker, period="max", actions=True)
-        data = data.xs(ticker, axis=1, level=1)
-        st.session_state["historical_data_all"][ticker] = data
+st.set_page_config(page_title="Investing 101", layout="wide")
 
-# Set the simulation data to the selected ETF's data
-st.session_state["historical_data"] = st.session_state["historical_data_all"][
-    selected_ticker
-]
-st.session_state["ticker"] = selected_ticker
+st.write("""
+Investing is the act of allocating resources, usually money, with the expectation of generating income or profit. 
+By investing, you can potentially grow your wealth over time, outpacing inflation and ensuring financial security.
 
-st.title("Investment Strategy Comparison")
-st.markdown(
-    """
-Investing in different ETFs presents distinct risk and return profiles. For example, Equity ETFs
-such as SPDR S&P 500 ETF Trust and Vanguard Total Stock Market ETF, which track major stock indices,
-typically exhibit higher volatility caused by the dynamic nature of the equity markets. This
-increased volatility means that while investors have the potential to achieve substantial
-returns over time, there are also greater swings in portfolio value over the short term.
-Such ETFs are generally better suited for those with a higher risk tolerance, as the
-potential for significant capital appreciation comes alongside the possibility of
-steep declines during market downturns.
+It can help you achieve your financial goals, such as saving for retirement, buying a home, or funding your children's education.
+Previous generations often relied on their savings account to grow their wealth but with the decreasing interest rates, this no longer
+generates a steady passive income as it used to be.
 
-In contrast, Bond ETFs like iShares Core US Aggregate Bond ETF are designed to offer
-lower volatility and steadier returns by focusing on fixed income securities. This
-more conservative approach helps to maintain portfolio stability and offers capital
-preservation benefits, particularly in turbulent market conditions. Additionally,
-international equity ETFs such as Vanguard FTSE Developed Markets ETF and Vanguard
-FTSE Emerging Markets ETF provide broader geographical diversification but may also
-be affected by factors like currency fluctuations and geopolitical events. Together,
-these differences in risk and return highlight the importance of aligning ETF selection
-with an investor’s overall risk profile, investment goals, and market outlook.
+This becomes visible when we compare the savings rate with the S&P 500 return. Note that the savings rate here is high, which is not the case in reality.
+""")
 
-Below plots the cumulative returns for all available ETFs.
-"""
+
+if "savings_rate" not in st.session_state:
+    # start = datetime.date(1986, 1, 1)
+    # end = datetime.date(2020, 1, 1)
+
+    # savings_rate = pdr.get_data_fred('PSAVERT', start, end)
+    # st.session_state["savings_rate"] = savings_rate.resample('YE').mean()
+    
+    years = list(range(1980, 2025))
+    rates = [
+        10.5, 11.0, 10.8, 10.2, 9.8, 9.2, 8.5, 8.0, 7.5, 7.0, 9.0, 8.5, 8.0, 7.8, 6.5,
+        6.0, 5.5, 5.0, 4.5, 3.5, 3.0, 3.0, 2.8, 2.5, 2.2, 2.0, 2.2, 3.0, 3.5, 1.5,
+        1.2, 1.5, 1.2, 1.0, 0.8, 0.5, 0.3, 0.2, 0.1, 0.1, 0.1, 0.1, 0.5, 1.5, 2.0
+    ]
+
+    df = pd.DataFrame({"Year": years, "Savings Rate": rates})
+    df.set_index("Year", inplace=True)
+    df.index = pd.to_datetime(df.index.astype(str)) + pd.offsets.YearEnd(0)
+    st.session_state["savings_rate"] = df
+
+    st.dataframe(st.session_state["savings_rate"])
+        
+if "sp500_return" not in st.session_state:
+    data = yf.download("^GSPC", period="50y", interval="1mo")
+
+    # Resample to get the last closing price of each year and compute annual returns.
+    yearly_data = data['Close'].resample('YE').last()
+    yearly_data.index = pd.to_datetime(yearly_data.index, format="%Y")
+    st.session_state["sp500_return"] = yearly_data.pct_change().dropna() * 100
+    
+
+combined = st.session_state["savings_rate"].merge(
+     st.session_state["sp500_return"], left_index=True, right_index=True, how="inner"
 )
 
-# Sidebar inputs for simulation parameters
-st.sidebar.header("Simulation Parameters")
+tab1, tab2, tab3 = st.tabs(["Combined", "Savings Rate", "S&P 500 Return"])
 
-# Prepare and display cumulative returns for all ETFs
-cumulative_returns_all = {}
-for ticker, data in st.session_state["historical_data_all"].items():
-    if not data.empty:
-        monthly_series = data["Close"].resample("ME").last().dropna()
-        if monthly_series.empty:
-            continue
-        etf_label = [name for name, sym in etfs.items() if sym == ticker][0]
-        cumulative_returns_all[etf_label] = (
-            monthly_series / monthly_series.iloc[0] - 1
-        ) * 100  # in percentage
+with tab1:
+    st.bar_chart(combined, use_container_width=True, stack=False)
+with tab2:
+    st.bar_chart(st.session_state["savings_rate"], use_container_width=True)
+with tab3:
+    st.bar_chart(st.session_state["sp500_return"], use_container_width=True)
 
-if cumulative_returns_all:
-    cumulative_returns_df = pd.DataFrame(cumulative_returns_all).dropna()
+# Compute cumulative returns by converting annual percentage changes into growth factors.
+savings = st.session_state["savings_rate"]
+sp500 = st.session_state["sp500_return"]
 
-    st.line_chart(cumulative_returns_df, use_container_width=True)
+cumulative_savings = (savings / 100 + 1).cumprod()
+cumulative_sp500 = (sp500 / 100 + 1).cumprod()
 
-    st.markdown(
-        """
-    The following metrics are calculated for each ETF:
-    - Annualized Return (%): The average yearly return over the sample period, accounting for compounding.
-    - Annualized Volatility (%): The standard deviation of daily returns scaled to an annual basis, reflecting risk.
-    - Maximum Drawdown (%): The largest peak-to-trough decline during the investment period, indicating worst-case loss.
-    - Sharpe Ratio: A risk-adjusted return measure, calculated as the annualized return divided by annualized volatility.
-    - Calmar Ratio: The ratio of annualized return to maximum drawdown, emphasizing return relative to downside risk.
-    """
-    )
+cumulative_df = cumulative_savings.merge(cumulative_sp500, left_index=True, right_index=True, how="inner")
+cumulative_df.columns = ["Savings", "S&P 500"]
 
-    etf_stats = {}
-    for name, ticker in etfs.items():
-        data = st.session_state["historical_data_all"][ticker]
-        if data.empty or "Close" not in data.columns:
-            continue
-        # Ensure data is sorted by date
-        price = data["Close"].sort_index()
-        # Daily returns
-        daily_returns = price.pct_change().dropna()
-        # Annualized Return: using the geometric return formula
-        total_period = (price.index[-1] - price.index[0]).days
-        annualized_return = (
-            (price.iloc[-1] / price.iloc[0]) ** (365 / total_period) - 1
-            if total_period > 0
-            else np.nan
-        )
-        # Annualized Volatility
-        annualized_vol = daily_returns.std() * np.sqrt(252)
-        # Maximum Drawdown
-        running_max = price.cummax()
-        drawdown = (price - running_max) / running_max
-        max_drawdown = drawdown.min()
-        sharpe_ratio = (
-            (annualized_return / annualized_vol) if annualized_vol != 0 else np.nan
-        )
-        calmar_ratio = (
-            (annualized_return / abs(max_drawdown)) if max_drawdown != 0 else np.nan
-        )
+final_savings = cumulative_df["Savings"].iloc[-1]
+final_sp500 = cumulative_df["S&P 500"].iloc[-1]
 
-        etf_stats[name] = {
-            "Annualized Return (%)": annualized_return * 100,
-            "Annualized Volatility (%)": annualized_vol * 100,
-            "Maximum Drawdown (%)": max_drawdown * 100,
-            "Sharpe Ratio": sharpe_ratio,
-            "Calmar Ratio": calmar_ratio,
-        }
-
-    if etf_stats:
-        stats_df = pd.DataFrame(etf_stats).T
-        st.dataframe(stats_df.style.format("{:.2f}"))
-
-# Date inputs: use available data range as bounds
-data_index = st.session_state["historical_data"].index
-min_date = data_index.min().date()
-max_date = data_index.max().date()
-start_date = st.sidebar.date_input(
-    "Select start date",
-    value=datetime.date(2010, 1, 1),
-    min_value=min_date,
-    max_value=max_date,
-)
-
-# Amount input: one amount is used for both strategies
-lump_sum = st.sidebar.number_input(
-    "Total Investment Amount (€)", min_value=0.0, value=DEFAULT_LUMP_SUM, step=100.0
-)
-
-# Use adjusted close prices and resample monthly (take last trading day)
-monthly_data = (
-    st.session_state["historical_data"]["Close"].resample("ME").last().dropna()
-)
-
-# Filter data from the starting date onward
-monthly_data = monthly_data[monthly_data.index >= pd.to_datetime(start_date)]
-
-if len(monthly_data) < 2:  # noqa
-    st.error("Not enough data points after the start date to run the simulation.")
-    st.stop()
-
-# Prepare DataFrame for simulation results
-simulation = pd.DataFrame(index=monthly_data.index)
-simulation["Price"] = monthly_data
-
-# Lists to track which simulation(s) we run
-simulation_labels = []
-plot_data = {}
-
-# Lump Sum Simulation: invest the lump sum on the first month
-if lump_sum > 0:
-    lump_shares = lump_sum / simulation["Price"].iloc[0]
-    simulation["LumpSum Value"] = lump_shares * simulation["Price"]
-    simulation_labels.append("Lump Sum Investing")
-    plot_data["Lump Sum Investing"] = simulation["LumpSum Value"]
-
-# Monthly Investing Simulation: invest an amount each month so that the total equals lump_sum
-if lump_sum > 0:
-    n_months = len(simulation)
-    computed_monthly = lump_sum / n_months
-    simulation["Monthly Shares Bought"] = computed_monthly / simulation["Price"]
-    simulation["Cumulative Shares"] = simulation["Monthly Shares Bought"].cumsum()
-    simulation["Monthly Value"] = simulation["Cumulative Shares"] * simulation["Price"]
-    simulation_labels.append("Monthly Investing")
-    plot_data["Monthly Investing"] = simulation["Monthly Value"]
-
-if not simulation_labels:
-    st.error("Please enter a positive investment amount.")
-    st.stop()
-
-# Savings simulation: regular monthly deposits with a defined savings rate
-savings_rate = st.sidebar.number_input(
-    "Savings Rate (%)", min_value=0.0, value=2.0, step=0.1
-)
-monthly_rate = savings_rate / 12 / 100
-monthly_investment = lump_sum / len(simulation)
-savings_values = []
-savings_accumulated = 0.0
-for _ in simulation.index:
-    savings_accumulated = (savings_accumulated + monthly_investment) * (
-        1 + monthly_rate
-    )
-    savings_values.append(savings_accumulated)
-simulation["Savings Value"] = savings_values
-plot_data["Savings Account"] = simulation["Savings Value"]
-
-# Calculate cumulative returns for each strategy
-cumulative_returns = pd.DataFrame(index=simulation.index)
-for label, series in plot_data.items():
-    if label == "Lump Sum Investing":
-        # For lump sum, the full amount is invested at once (baseline is lump_sum)
-        cumulative_returns[label] = (series - lump_sum) / lump_sum * 100
-    elif label in ["Monthly Investing", "Savings Account"]:
-        # For monthly investing and savings account, calculate cumulative invested amount up to each month
-        cumulative_invested = monthly_investment * pd.Series(
-            range(1, len(simulation) + 1), index=simulation.index
-        )
-        cumulative_returns[label] = (
-            (series - cumulative_invested) / cumulative_invested * 100
-        )
-
-# Display cumulative returns using Streamlit's built-in line chart
-st.subheader("Cumulative Return Over Time (%)")
-st.markdown(
-    """
-Investment strategies differ in risk and return profiles. Lump Sum Investing involves
-investing the entire amount at once, which can lead to substantial gains if the
-market is trending upwards immediately after the investment, but also carries
-the risk of significant losses if the market takes a downturn.
-
-Dollar Cost Averaging (Monthly Investing) involves investing equal amounts
-at regular intervals, thereby averaging out the purchase price.
-
-A Savings Account strategy simulates depositing money regularly in a savings
-account with a fixed annual interest rate, representing a conservative,
-interest-bearing alternative.
-"""
-)
-cumulative_returns["Profit Line"] = 0
-st.line_chart(cumulative_returns, use_container_width=True)
-
-
-# Summary stats: final portfolio values, total invested, and return
-st.sidebar.subheader("Summary Statistics")
-summary_lines = []
-final_date = simulation.index[-1]
-if "Lump Sum Investing" in simulation_labels:
-    final_lump = simulation["LumpSum Value"].iloc[-1]
-    total_invested_lump = lump_sum
-    roi_lump = ((final_lump - total_invested_lump) / total_invested_lump) * 100
-    summary_lines.append(
-        f"**Lump Sum Investing (as of {final_date.date()}):** Invested "
-        f"€{total_invested_lump:,.2f}, Final Value €{final_lump:,.2f} (ROI: {roi_lump:,.2f}%)"
-    )
-
-if "Monthly Investing" in simulation_labels:
-    final_monthly = simulation["Monthly Value"].iloc[-1]
-    # Total invested is exactly the lump_sum for monthly strategy.
-    total_invested_monthly = lump_sum
-    roi_monthly = (
-        (final_monthly - total_invested_monthly) / total_invested_monthly
-    ) * 100
-    summary_lines.append(
-        f"**Monthly Investing (as of {final_date.date()}):** Invested "
-        f"€{total_invested_monthly:,.2f} evenly over {len(simulation)} "
-        f"months, Final Value €{final_monthly:,.2f} (ROI: {roi_monthly:,.2f}%)"
-    )
-
-if (
-    "Lump Sum Investing" in simulation_labels
-    and "Monthly Investing" in simulation_labels
-):
-    final_combined = (
-        simulation["LumpSum Value"].iloc[-1] + simulation["Monthly Value"].iloc[-1]
-    )
-    total_invested_combined = lump_sum + lump_sum
-    roi_combined = (
-        (final_combined - total_invested_combined) / total_invested_combined
-    ) * 100
-    summary_lines.append(
-        f"**Combination Investing (as of {final_date.date()}):** Invested "
-        f"€{total_invested_combined:,.2f} (Lump Sum €{lump_sum:,.2f} + Monthly "
-        f"€{lump_sum:,.2f}), Final Value €{final_combined:,.2f} (ROI: {roi_combined:,.2f}%)"
-    )
-
-st.sidebar.markdown("\n\n".join(summary_lines))
+if final_sp500 > final_savings:
+    st.write(f"The S&P 500 accumulated to **{final_sp500:.2f}** compared to the savings account's **{final_savings:.2f}**. "
+                "This indicates that, over the covered period, investing in the S&P 500 significantly outpaced the growth you would have seen by relying solely on traditional savings returns.")
+else:
+    st.write(f"The savings account accumulated to {final_savings:.2f} compared to the S&P 500's {final_sp500:.2f}. "
+                "This shows that in this specific timeframe, saving provided higher cumulative returns than investing in the market.")
+    
+st.line_chart(cumulative_df, use_container_width=True)

@@ -5,29 +5,42 @@ fed_rate_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3f
 ecb_rate_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3fb&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=off&txtcolor=%23444444&ts=12&tts=12&width=1320&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=ECBDFR&scale=left&cosd=1900-02-20&coed=2025-02-20&line_color=%230073e6&link_values=false&line_style=solid&mark_type=none&mw=3&lw=3&ost=-99999&oet=99999&mma=0&fml=a&fq=Daily%2C%207-Day&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=lin&vintage_date=2025-02-20&revision_date=2025-02-20&nd=1999-01-01"
 euro_area_inflation_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3fb&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=off&txtcolor=%23444444&ts=12&tts=12&width=1320&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=CP0000EZ19M086NEST&scale=left&cosd=1997-01-01&coed=2024-12-01&line_color=%230073e6&link_values=false&line_style=solid&mark_type=none&mw=3&lw=3&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=pc1&vintage_date=2025-02-20&revision_date=2025-02-20&nd=1996-01-01"
 us_inflation_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3fb&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=on&txtcolor=%23444444&ts=12&tts=12&width=1320&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=CPIAUCSL&scale=left&cosd=1947-01-01&coed=2025-01-01&line_color=%230073e6&link_values=false&line_style=solid&mark_type=none&mw=3&lw=3&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=pc1&vintage_date=2025-02-20&revision_date=2025-02-20&nd=1947-01-01"
+us_savings_rate_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3fb&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=on&txtcolor=%23444444&ts=12&tts=12&width=1320&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=SNDR&scale=left&cosd=1900-04-01&coed=2025-02-01&line_color=%230073e6&link_values=false&line_style=solid&mark_type=none&mw=3&lw=3&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2021-04-01&line_index=1&transformation=lin&vintage_date=2025-02-21&revision_date=2025-02-21&nd=1947-01-01"
+us_mortgage_rate_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23ebf3fb&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=on&txtcolor=%23444444&ts=12&tts=12&width=1320&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=MORTGAGE30US&scale=left&cosd=1971-04-02&coed=2025-02-20&line_color=%230073e6&link_values=false&line_style=solid&mark_type=none&mw=3&lw=3&ost=-99999&oet=99999&mma=0&fml=a&fq=Weekly%2C%20Ending%20Thursday&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=lin&vintage_date=2025-02-21&revision_date=2025-02-21&nd=1971-04-02"
 
-if "fed_rate" not in st.session_state:
-    st.session_state["fed_rate"] = pd.read_csv(fed_rate_url, index_col=0)
-    st.session_state["fed_rate"].index = pd.to_datetime(
-        st.session_state["fed_rate"].index
-    )
-if "us_inflation" not in st.session_state:
-    st.session_state["us_inflation"] = pd.read_csv(us_inflation_url, index_col=0)
-    st.session_state["us_inflation"].index = pd.to_datetime(
-        st.session_state["us_inflation"].index
-    )
-if "ecb_rate" not in st.session_state:
-    st.session_state["ecb_rate"] = pd.read_csv(ecb_rate_url, index_col=0)
-    st.session_state["ecb_rate"].index = pd.to_datetime(
-        st.session_state["ecb_rate"].index
-    )
-if "euro_area_inflation" not in st.session_state:
-    st.session_state["euro_area_inflation"] = pd.read_csv(
-        euro_area_inflation_url, index_col=0
-    )
-    st.session_state["euro_area_inflation"].index = pd.to_datetime(
-        st.session_state["euro_area_inflation"].index
-    )
+with st.spinner("Loading data..."):
+    if "fed_rate" not in st.session_state:
+        st.session_state["fed_rate"] = pd.read_csv(fed_rate_url, index_col=0)
+        st.session_state["fed_rate"].index = pd.to_datetime(
+            st.session_state["fed_rate"].index
+        )
+    if "us_inflation" not in st.session_state:
+        st.session_state["us_inflation"] = pd.read_csv(us_inflation_url, index_col=0)
+        st.session_state["us_inflation"].index = pd.to_datetime(
+            st.session_state["us_inflation"].index
+        )
+    if "ecb_rate" not in st.session_state:
+        st.session_state["ecb_rate"] = pd.read_csv(ecb_rate_url, index_col=0)
+        st.session_state["ecb_rate"].index = pd.to_datetime(
+            st.session_state["ecb_rate"].index
+        )
+    if "euro_area_inflation" not in st.session_state:
+        st.session_state["euro_area_inflation"] = pd.read_csv(
+            euro_area_inflation_url, index_col=0
+        )
+        st.session_state["euro_area_inflation"].index = pd.to_datetime(
+            st.session_state["euro_area_inflation"].index
+        )
+    if "us_savings_rate" not in st.session_state:
+        st.session_state["us_savings_rate"] = pd.read_csv(us_savings_rate_url, index_col=0)
+        st.session_state["us_savings_rate"].index = pd.to_datetime(
+            st.session_state["us_savings_rate"].index
+        )
+    if "us_mortgage_rate" not in st.session_state:
+        st.session_state["us_mortgage_rate"] = pd.read_csv(us_mortgage_rate_url, index_col=0)
+        st.session_state["us_mortgage_rate"].index = pd.to_datetime(
+            st.session_state["us_mortgage_rate"].index
+        )
 
 st.subheader("Understanding Inflation and Central Bank Policies")
 
@@ -123,3 +136,49 @@ combined = combined.ffill()
 combined.columns = ["Inflation Rate", "Federal Funds Rate"]
 
 st.line_chart(combined, use_container_width=True)
+
+
+st.subheader("The Central Bank's Influence on Savings and Mortgage Rates")
+
+# Get the latest readings and calculate recent changes
+# Explain the relationship between the US Savings Rate and the Federal Funds Rate
+text = (
+    "Analysis indicates a direct correlation between the US Savings Rate and the Federal Funds Rate. "
+    "When the Federal Reserve adjusts its benchmark rate, it appears that the savings behavior adjusts correspondingly. "
+    "Higher rates often promote increased savings, as borrowing costs rise, while lower rates may reduce the incentive to save."
+)
+st.markdown(text)
+
+savings_rate_combined = st.session_state["us_savings_rate"].merge(
+    st.session_state["fed_rate"] / 10,
+    left_index=True,
+    right_index=True,
+)
+
+savings_rate_combined = savings_rate_combined.ffill()
+
+savings_rate_combined.columns = ["Savings Rate", "Federal Funds Rate"]
+
+st.line_chart(savings_rate_combined, use_container_width=True)
+
+# Get the latest readings and calculate recent changes
+# Explain the relationship between the US Mortgage Rate and the Federal Funds Rate
+text = (
+    "The US Mortgage Rate is closely tied to the Federal Funds Rate. "
+    "When the Federal Reserve adjusts its benchmark rate, mortgage rates tend to follow suit. "
+    "Higher rates can lead to increased borrowing costs, which may slow down the housing market, while lower rates can stimulate demand."
+)
+
+st.markdown(text)
+
+mortgage_rate_monthly = st.session_state["us_mortgage_rate"].resample("ME").last()
+fed_rate_monthly = st.session_state["fed_rate"].resample("ME").last()
+
+mortgage_rate_combined = mortgage_rate_monthly.merge(
+    fed_rate_monthly,
+    left_index=True,
+    right_index=True,
+)
+mortgage_rate_combined.columns = ["Mortgage Rate", "Federal Funds Rate"]
+
+st.line_chart(mortgage_rate_combined, use_container_width=True)
