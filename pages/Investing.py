@@ -80,8 +80,6 @@ if "savings_rate" not in st.session_state:
     df.index = pd.to_datetime(df.index.astype(str)) + pd.offsets.YearEnd(0)
     st.session_state["savings_rate"] = df
 
-    st.dataframe(st.session_state["savings_rate"])
-
 if "sp500_return" not in st.session_state:
     data = yf.download("^GSPC", period="50y", interval="1mo")
 

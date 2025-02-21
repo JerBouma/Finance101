@@ -40,7 +40,7 @@ keywords = [
 python = ">=3.10, <3.13"
 pandas = {version = "^2.2", extras = ["computation", "performance", "plot"]}
 yfinance = "*"
-streamlit = "^1.42.1"
+streamlit = "^1.42.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
