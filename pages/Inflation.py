@@ -32,12 +32,16 @@ with st.spinner("Loading data..."):
             st.session_state["euro_area_inflation"].index
         )
     if "us_savings_rate" not in st.session_state:
-        st.session_state["us_savings_rate"] = pd.read_csv(us_savings_rate_url, index_col=0)
+        st.session_state["us_savings_rate"] = pd.read_csv(
+            us_savings_rate_url, index_col=0
+        )
         st.session_state["us_savings_rate"].index = pd.to_datetime(
             st.session_state["us_savings_rate"].index
         )
     if "us_mortgage_rate" not in st.session_state:
-        st.session_state["us_mortgage_rate"] = pd.read_csv(us_mortgage_rate_url, index_col=0)
+        st.session_state["us_mortgage_rate"] = pd.read_csv(
+            us_mortgage_rate_url, index_col=0
+        )
         st.session_state["us_mortgage_rate"].index = pd.to_datetime(
             st.session_state["us_mortgage_rate"].index
         )
