@@ -28,7 +28,8 @@ if "historical_data_all" not in st.session_state:
     for name, ticker in etfs.items():
         # Download data, handling potential errors
         try:
-            data = yf.download(ticker, period="max", actions=True)
+            ticker_obj = yf.Ticker(ticker)
+            data = ticker_obj.history(period="max", actions=True)
             # Check if data was downloaded and has expected columns
             if not data.empty and 'Close' in data.columns:
                  # No need for xs if downloading single ticker
@@ -92,17 +93,27 @@ for ticker, data in st.session_state["historical_data_all"].items():
             continue
         etf_label = [name for name, sym in etfs.items() if sym == ticker][0]
         # Ensure first price is not zero and not NaN before calculating returns
-        # .iloc[0] on a Series should return a scalar
-        first_price = monthly_series.iloc[0]
-        # Check the scalar value
-        if pd.notna(first_price) and first_price != 0:
-            cumulative_returns_all[etf_label] = (
-                monthly_series / first_price - 1
-            ) * 100  # in percentage
-        elif pd.isna(first_price):
-             st.warning(f"Initial price for {etf_label} is NaN, cannot calculate cumulative returns.")
-        else: # Handles the case where first_price is 0
-             st.warning(f"Initial price for {etf_label} is zero, cannot calculate cumulative returns.")
+        try:
+            first_price = monthly_series.iloc[0]
+            # Ensure first_price is a scalar, using .item() if necessary for Series/array-like objects
+            if hasattr(first_price, 'item'):
+                first_price = first_price.item()
+
+            # Check the scalar value
+            if pd.notna(first_price) and first_price != 0:
+                cumulative_returns_all[etf_label] = (
+                    monthly_series / first_price - 1
+                ) * 100  # in percentage
+            elif pd.isna(first_price):
+                 st.warning(f"Initial price for {etf_label} is NaN, cannot calculate cumulative returns.")
+            else: # Handles the case where first_price is 0
+                 st.warning(f"Initial price for {etf_label} is zero, cannot calculate cumulative returns.")
+        except IndexError:
+            # This handles the case where monthly_series might be empty despite earlier checks
+            st.warning(f"Could not get initial price for {etf_label} (IndexError). Skipping calculation.")
+        except ValueError as e:
+            # Catch error if .item() is called on multi-element Series or wrong type
+            st.warning(f"Error processing initial price for {etf_label}: {e}. Skipping calculation.")
 
 
 if cumulative_returns_all:
@@ -250,7 +261,14 @@ monthly_data = (
 )
 
 # Filter data from the starting date onward
-monthly_data = monthly_data[monthly_data.index >= pd.to_datetime(start_date)]
+# Ensure start_date is timezone-aware if the index is
+start_timestamp = pd.Timestamp(start_date)
+if monthly_data.index.tz is not None:
+    # Localize the start_timestamp to the index's timezone
+    start_timestamp = start_timestamp.tz_localize(monthly_data.index.tz)
+
+monthly_data = monthly_data[monthly_data.index >= start_timestamp]
+
 
 if len(monthly_data) < 2:  # noqa
     st.error("Not enough data points after the start date to run the simulation.")
