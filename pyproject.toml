@@ -41,6 +41,7 @@ python = ">=3.10, <3.13"
 pandas = {version = "^2.2", extras = ["computation", "performance", "plot"]}
 yfinance = "*"
 streamlit = "^1.42.2"
+plotly = "^6.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
