@@ -10,8 +10,9 @@ import streamlit as st
 from pages.mortgages import mortgages_model
 
 # --- Constants ---
-FINANCING_BURDEN_FILE = "financing_burden_2025.pickle"
-ENERGY_LABELS_FILE = "energy_labels.pickle"
+SCRIPT_DIR = Path(__file__).resolve().parent
+FINANCING_BURDEN_FILE = "pages/mortgages/datasets/financing_burden_2025.pickle"
+ENERGY_LABELS_FILE = "pages/mortgages/datasets/energy_labels.pickle"
 DEFAULT_INCOME_1 = 60000.0
 DEFAULT_INCOME_2 = 40000.0
 DEFAULT_INTEREST_RATE_PCT = 4.0
