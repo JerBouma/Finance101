@@ -632,3 +632,352 @@ else:
             "estimate using the first month's tax deduction. The actual affordable "
             "amount might be slightly lower as the tax benefit decreases over time."
         )
+
+# --- Fixed Interest Rate Period Comparison ---
+st.markdown(
+    '<p class="sub-header">Fixed Interest Rate Period Comparison</p>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    f"""
+    This section helps you compare different interest rates, which are typically
+    associated with various fixed-rate periods (e.g., an interest rate for a 10-year
+    fixed period, another for a 20-year fixed period).
+
+    For your calculated maximum mortgage of **€{maximum_mortgage:,.0f}** over a
+    total loan term of **{term_years} years** (as set in the main input parameters),
+    you can input these different interest rates below.
+
+    The table will then show the financial outcomes (monthly payments, total interest,
+    principal repaid at key milestones, etc.) as if that specific interest rate
+    were applied for the *entire* **{term_years}-year** loan duration. This allows for a
+    side-by-side comparison of how different interest rate levels impact your mortgage.
+
+    Please note that it is of course unrealistic to assume the same interest rate for the
+    entire {term_years} year period and the therefore the most important aspect is to compare
+    Principal Repaid at 5 and 10 years.
+    """,
+    unsafe_allow_html=True,
+)
+
+if maximum_mortgage <= 0:
+    st.warning(
+        "Cannot perform interest rate comparison for a zero or negative mortgage amount."
+    )
+elif term_years <= 0:
+    st.warning(
+        "Cannot perform interest rate comparison because the main loan term is not "
+        "greater than zero. Please set a valid term in the main input parameters."
+    )
+else:
+    # These are labels for different fixed-rate periods, for which users will input rates
+    fixed_rate_periods_to_label_rates = [10, 15, 20, 30]
+    # Default rate increments for initial display, user can change these
+    default_rate_increments_pct = [0.0, 0.1, 0.2, 0.3]  # Relative to main interest rate
+
+    st.markdown("**Enter Annual Interest Rates for Each Scenario:**")
+    cols_rates = st.columns(len(fixed_rate_periods_to_label_rates))
+    input_rates_pct = {}
+
+    for i, fixed_period_label_yr in enumerate(fixed_rate_periods_to_label_rates):
+        with cols_rates[i]:
+            default_rate = round(interest_rate_pct + default_rate_increments_pct[i], 2)
+            input_rates_pct[fixed_period_label_yr] = st.number_input(
+                label=f"Rate for {fixed_period_label_yr}-Yr Fix (%)",
+                min_value=0.0,
+                max_value=20.0,
+                value=default_rate,
+                step=0.01,
+                format="%.2f",
+                key=f"rate_scenario_input_{fixed_period_label_yr}",
+            )
+
+    comparison_data_list = []
+
+    for fixed_period_label_yr in fixed_rate_periods_to_label_rates:
+        current_scenario_rate_pct = input_rates_pct[fixed_period_label_yr]
+        current_scenario_rate_annual = current_scenario_rate_pct / 100.0
+
+        # Calculate payments and simulation using the main `term_years` for loan duration
+        (
+            gross_monthly,
+            net_monthly,
+            _,
+            _,
+        ) = mortgages_model.calculate_monthly_payments(
+            maximum_mortgage,
+            current_scenario_rate_annual,  # The rate for this scenario
+            term_years,  # Main loan term from page inputs
+            MORTGAGE_INTEREST_TAX_DEDUCTION_RATE,
+        )
+
+        # Run simulation using the main `term_years` for loan duration
+        simulation_df_scenario = mortgages_model.run_payment_simulation(
+            maximum_mortgage,
+            current_scenario_rate_annual,  # The rate for this scenario
+            term_years,  # Main loan term from page inputs
+            MORTGAGE_INTEREST_TAX_DEDUCTION_RATE,
+        )
+
+        total_gross_interest_paid = float("nan")
+        total_net_cost = float("nan")
+        total_gross_paid = float("nan")
+        repaid_at_5_years = float("nan")
+        repaid_at_10_years = float("nan")
+
+        if simulation_df_scenario is not None and not simulation_df_scenario.empty:
+            total_gross_interest_paid = simulation_df_scenario["Interest Payment"].sum()
+            total_net_cost = simulation_df_scenario["Net Monthly Payment"].sum()
+            if not np.isnan(total_gross_interest_paid):
+                total_gross_paid = maximum_mortgage + total_gross_interest_paid
+
+            # Principal Repaid at 5 Years (Month 60)
+            # Check against the actual loan term (`term_years`)
+            if term_years * 12 < 60:  # Actual loan term is less than 5 years
+                repaid_at_5_years = maximum_mortgage  # Fully repaid
+            else:  # Actual loan term is 5 years or more
+                month_60_data = simulation_df_scenario[
+                    simulation_df_scenario["Month"] == 60
+                ]
+                if not month_60_data.empty:
+                    outstanding_at_5_years = month_60_data[
+                        "Outstanding Principal"
+                    ].iloc[0]
+                    repaid_at_5_years = maximum_mortgage - outstanding_at_5_years
+                elif term_years * 12 == 60:  # Loan term is exactly 5 years
+                    outstanding_at_5_years = simulation_df_scenario[
+                        "Outstanding Principal"
+                    ].iloc[-1]
+                    repaid_at_5_years = maximum_mortgage - outstanding_at_5_years
+
+            # Principal Repaid at 10 Years (Month 120)
+            # Check against the actual loan term (`term_years`)
+            if term_years * 12 < 120:  # Actual loan term is less than 10 years
+                repaid_at_10_years = maximum_mortgage  # Fully repaid
+            else:  # Actual loan term is 10 years or more
+                month_120_data = simulation_df_scenario[
+                    simulation_df_scenario["Month"] == 120
+                ]
+                if not month_120_data.empty:
+                    outstanding_at_10_years = month_120_data[
+                        "Outstanding Principal"
+                    ].iloc[0]
+                    repaid_at_10_years = maximum_mortgage - outstanding_at_10_years
+                elif term_years * 12 == 120:  # Loan term is exactly 10 years
+                    outstanding_at_10_years = simulation_df_scenario[
+                        "Outstanding Principal"
+                    ].iloc[-1]
+                    repaid_at_10_years = maximum_mortgage - outstanding_at_10_years
+        else:
+            st.error(
+                f"Failed to run simulation for {term_years}-year loan "
+                f"at {current_scenario_rate_pct:.2f}%. Principal: €{maximum_mortgage:,.0f}."
+            )
+
+        scenario_data_dict = {
+            "Rate Scenario (Fixed Period)": f"{fixed_period_label_yr} Years Fix",  # Label for the rate
+            "Gross Monthly Payment (€)": gross_monthly,
+            "Net Monthly Payment (€)": net_monthly,
+            "Principal Repaid at 5 Years (€)": repaid_at_5_years,
+            "Principal Repaid at 10 Years (€)": repaid_at_10_years,
+            "Total Principal Paid (€)": maximum_mortgage,  # Over the full term_years
+            "Total Gross Interest Paid (€)": total_gross_interest_paid,  # Over term_years
+            "Total Gross Paid (Principal + Gross Interest) (€)": total_gross_paid,  # Over term_years
+            "Total Net Cost (Principal + Net Interest) (€)": total_net_cost,  # Over term_years
+        }
+        comparison_data_list.append(scenario_data_dict)
+
+    if comparison_data_list:
+        results_df = pd.DataFrame(comparison_data_list)
+
+        # Format currency and percentage columns
+        currency_columns = [col for col in results_df.columns if "(€)" in col]
+        percentage_columns = [col for col in results_df.columns if "(%)" in col]
+
+        for col_name in currency_columns:
+            if col_name in results_df.columns:
+                results_df[col_name] = results_df[col_name].round(2)
+        for col_name in percentage_columns:
+            if col_name in results_df.columns:
+                results_df[col_name] = results_df[col_name].round(2)
+
+        results_df = results_df.set_index("Rate Scenario (Fixed Period)")
+        transposed_df = results_df.T  # Metrics as rows, scenarios as columns
+
+        st.markdown(
+            '<div class="chart-container" style="margin-top: 1rem;">',
+            unsafe_allow_html=True,
+        )
+
+        # Define formatting for the transposed DataFrame
+        format_dict_transposed = {}
+        for (
+            col_header_scenario_label
+        ) in transposed_df.columns:  # Columns are "10 Years Fix", etc.
+            # Each row (metric) needs specific formatting
+            # Default to general number, then override for currency/percentage
+            format_dict_transposed[col_header_scenario_label] = "{:,.2f}"  # Default
+
+        # Apply specific formatting based on row index (metric name)
+        # This requires iterating through the index of transposed_df
+        final_formatters = {}
+        for metric_name in transposed_df.columns:
+            final_formatters[metric_name] = lambda x: (
+                f"€{x:,.2f}" if pd.notnull(x) else "-"
+            )
+
+        st.dataframe(
+            transposed_df.style.format(formatter=final_formatters, na_rep="-"),
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.info("No interest rate scenario data to display.")
+
+# --- Detailed Monthly Payment Schedule ---
+st.markdown(
+    '<p class="sub-header">Detailed Monthly Payment Schedule</p>',
+    unsafe_allow_html=True,
+)
+
+if maximum_mortgage <= 0:
+    st.info(
+        "A detailed monthly payment schedule cannot be generated because the "
+        "calculated maximum mortgage amount is zero or negative."
+    )
+elif term_years <= 0:
+    st.warning(
+        "A detailed monthly payment schedule cannot be generated because the "
+        "loan term is not greater than zero. Please select a valid term."
+    )
+else:
+    # Allow user to select/override interest rate for this specific schedule
+    schedule_interest_rate_pct = st.number_input(
+        "Annual interest rate for this schedule (%)",
+        min_value=0.0,
+        max_value=25.0,  # Reasonable upper limit
+        value=interest_rate_pct,  # Default to the main interest rate
+        step=0.01,
+        format="%.2f",
+        key="schedule_specific_interest_rate",
+        help=(
+            "Adjust this rate to see how the detailed monthly payments change. "
+            "This will not affect other calculations on the page."
+        ),
+    )
+    schedule_interest_rate_annual = schedule_interest_rate_pct / 100.0
+
+    show_payment_percentages = st.checkbox(
+        "Show Principal/Interest Percentages of Gross Payment",
+        value=False,  # Default to not showing
+        key="show_percentages_checkbox",
+        help="If checked, the table will include columns showing the percentage of each gross monthly payment allocated to principal and interest.",
+    )
+
+    # Recalculate simulation data for this specific schedule and interest rate
+    schedule_simulation_data = None
+    if maximum_mortgage > 0 and term_years > 0:
+        schedule_simulation_data = mortgages_model.run_payment_simulation(
+            maximum_mortgage=maximum_mortgage,
+            interest_rate=schedule_interest_rate_annual,
+            term_years=term_years,
+            tax_deduction_rate=MORTGAGE_INTEREST_TAX_DEDUCTION_RATE,
+        )
+
+    if schedule_simulation_data is not None and not schedule_simulation_data.empty:
+        st.markdown(
+            f"""
+            Below is the detailed month-by-month breakdown for your primary mortgage of
+            <b>€{maximum_mortgage:,.0f}</b> over <b>{term_years} years</b>
+            at an annual interest rate of <b>{schedule_interest_rate_pct:.2f}%</b>.
+            The table shows the principal repayment, gross interest, gross and net monthly payments,
+            the tax deduction applied, and the outstanding mortgage balance after each payment.
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Define base columns and their new names
+        base_columns_map = {
+            "Date": "Payment Date",
+            "Principal Payment": "Principal Repaid (€)",
+            "Interest Payment": "Interest Paid (Gross) (€)",
+            "Gross Monthly Payment": "Gross Monthly Payment (€)",
+            "Tax Deduction": "Tax Deduction (€)",
+            "Net Monthly Payment": "Net Monthly Payment (€)",
+            "Outstanding Principal": "Remaining Mortgage Balance (€)",
+        }
+        schedule_df = schedule_simulation_data[list(base_columns_map.keys())].copy()
+        schedule_df.rename(columns=base_columns_map, inplace=True)
+
+        # Initialize formatters and columns to display
+        formatters = {
+            "Payment Date": "{:%Y-%m}",
+            "Principal Repaid (€)": "€{:,.2f}",
+            "Interest Paid (Gross) (€)": "€{:,.2f}",
+            "Gross Monthly Payment (€)": "€{:,.2f}",
+            "Tax Deduction (€)": "€{:,.2f}",
+            "Net Monthly Payment (€)": "€{:,.2f}",
+            "Remaining Mortgage Balance (€)": "€{:,.2f}",
+        }
+        columns_to_display = list(base_columns_map.values())
+
+        if show_payment_percentages:
+            gross_payment_col_name = "Gross Monthly Payment (€)"
+            principal_repaid_col_name = "Principal Repaid (€)"
+            interest_paid_col_name = "Interest Paid (Gross) (€)"
+
+            # Calculate percentage columns, handling potential division by zero
+            schedule_df["Principal % of Gross"] = np.where(
+                schedule_df[gross_payment_col_name].ne(0)
+                & pd.notna(schedule_df[gross_payment_col_name]),
+                (
+                    schedule_df[principal_repaid_col_name]
+                    / schedule_df[gross_payment_col_name]
+                )
+                * 100,
+                0.0,
+            )
+            schedule_df["Interest % of Gross"] = np.where(
+                schedule_df[gross_payment_col_name].ne(0)
+                & pd.notna(schedule_df[gross_payment_col_name]),
+                (
+                    schedule_df[interest_paid_col_name]
+                    / schedule_df[gross_payment_col_name]
+                )
+                * 100,
+                0.0,
+            )
+
+            # Add new percentage columns to the display list and formatters
+            # Insert after "Gross Monthly Payment (€)"
+            try:
+                gross_payment_index = columns_to_display.index(gross_payment_col_name)
+                columns_to_display.insert(
+                    gross_payment_index + 1, "Interest % of Gross"
+                )
+                columns_to_display.insert(
+                    gross_payment_index + 1, "Principal % of Gross"
+                )
+            except ValueError:  # Should not happen if base_columns_map is correct
+                columns_to_display.extend(
+                    ["Principal % of Gross", "Interest % of Gross"]
+                )
+
+            formatters["Principal % of Gross"] = "{:.2f}%"
+            formatters["Interest % of Gross"] = "{:.2f}%"
+
+        # Display the formatted DataFrame
+        st.dataframe(
+            schedule_df[columns_to_display].style.format(formatters, na_rep="-"),
+            use_container_width=True,
+            height=500,  # Set a fixed height for the table with a scrollbar
+            hide_index=True,
+        )
+    elif maximum_mortgage > 0:
+        st.warning(
+            "The detailed monthly payment schedule could not be generated for the "
+            f"selected interest rate of {schedule_interest_rate_pct:.2f}%. "
+            "This might occur if the simulation did not produce valid results. "
+            "Please check the main input parameters or the selected interest rate for this schedule."
+        )
